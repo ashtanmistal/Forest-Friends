@@ -8,6 +8,8 @@ The following steps are taken to preprocess the raw LiDAR data:
   - Only keep x, y, z, r, g, b columns
   - Rotate and translate points to align with coordinates of Minecraft world
     - NOTE this is a specific step that must be modified if the LiDAR data is from a different source. I will make this robust and allow for an (X, Y, Z -> X', Y', Z') transformation function to be passed in as a parameter.
+  - Remove height from trees: For the clustering, all the trees need to be relative to the ground. As a result, we'll need the triangulated DEM of the area to subtract the height of each tree from.
+    - For this *particular* project, the DEM is calculated separately in the MinecraftUBC repository given it is also used for additional tasks there too (voxelization and colorization of the DEM). **It is therefore assumed, for this project, that the DEM is already calculated and available.**
   - Merge all partitions into one dataset for downstream processing
 
 Preprocessing the .csv file:
