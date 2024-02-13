@@ -77,10 +77,11 @@ def filter_points_in_tree_radius(points, tree_radius, tree_center):
     # Filter out points that are not within the tree_radius of the tree_center
     return points[dist <= tree_radius]
 
+
 def pc_normalize(pc):
     centroid = np.mean(pc, axis=0)
     pc = pc - centroid
-    m = np.max(np.sqrt(np.sum(pc**2, axis=1)))
+    m = np.max(np.sqrt(np.sum(pc ** 2, axis=1)))
     pc = pc / m
     return pc
 
@@ -94,7 +95,7 @@ def farthest_point_sample(point, npoint):
         centroids: sampled pointcloud index, [npoint, D]
     """
     N, D = point.shape
-    xyz = point[:,:3]
+    xyz = point[:, :3]
     centroids = np.zeros((npoint,))
     distance = np.ones((N,)) * 1e10
     farthest = np.random.randint(0, N)
@@ -155,10 +156,8 @@ class UBCTreeDataset(Dataset):
     def _get_item(self, index):
         pass  # TODO implement this function
 
-
     def __getitem__(self, index):
         return self._get_item(index)
-
 
 
 if __name__ == '__main__':
