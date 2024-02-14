@@ -1,0 +1,3 @@
+[submodule "src/meanshift"]
+	path = src/meanshift
+	url = https://github.com/masqm/Faster-Mean-Shift-Euc.git
