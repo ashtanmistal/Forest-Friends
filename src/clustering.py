@@ -1,15 +1,15 @@
 import pylas
-from sklearn.cluster import MeanShift, DBSCAN
 import pandas as pd
 import numpy as np
+from sklearn.cluster import estimate_bandwidth
+from sklearn.preprocessing import StandardScaler
 import os
 
 from tqdm import tqdm
 
 from preprocessing import data_dir
 from src import utils
-
-MIN_BIN_FREQ = 60
+from meanshift.mean_shift_gpu import MeanShiftEuc
 
 
 def gather_lidar_data():
@@ -85,9 +85,15 @@ def cluster(ds):
     g = ds[:, 4]
     b = ds[:, 5]
 
-    ms = MeanShift(bin_seeding=True, min_bin_freq=MIN_BIN_FREQ, cluster_all=False, max_iter=63, n_jobs=15)
-    print("Fitting meanshift...")
-    ms.fit(np.vstack((x, z)).transpose())  # we don't care about the height or color for this part
+    # perform mean shift clustering
+    # estimate bandwidth (use random sample of 1000 points if the dataset is too large)
+    n_samples = np.min([1000, len(x)])
+    stacked_xz = np.vstack((x, z)).transpose()
+    bandwidth = estimate_bandwidth(stacked_xz, n_samples=n_samples)
+    bandwidth_gpu = 2 * bandwidth / (np.max(stacked_xz) - np.min(stacked_xz))
+    ms = MeanShiftEuc(bandwidth=bandwidth_gpu, cluster_all=False, GPU=True)
+    # print("Fitting meanshift...")
+    ms.fit(stacked_xz)
     ms_labels = ms.labels_
     cluster_centers = ms.cluster_centers_
     # remove points that are not in a cluster
@@ -95,7 +101,7 @@ def cluster(ds):
     x, y, z = x[non_ground_indices], y[non_ground_indices], z[non_ground_indices]
     r, g, b = r[non_ground_indices], g[non_ground_indices], b[non_ground_indices]
     ms_labels = ms_labels[non_ground_indices]
-    print("Performing vertical strata analysis...")
+    # print("Performing vertical strata analysis...")
     crown_clusters, non_ground_points, tree_cluster_centers, tree_clusters = vertical_strata_analysis(cluster_centers,
                                                                                                       ms_labels, x, y,
                                                                                                       z)
@@ -137,8 +143,9 @@ def main():
 
     lidar_directory = os.path.join(data_dir, "las")
 
-    for filename in tqdm(os.listdir(lidar_directory)):
+    for filename in os.listdir(lidar_directory):
         if filename.endswith(".las"):
+            print("Processing", filename)
             x, y, z, r, g, b = utils.preprocess_dataset(
                 pylas.read(os.path.join(lidar_directory, filename)),
                 5,  # high vegetation label
@@ -148,14 +155,37 @@ def main():
 
             tree_points = np.vstack((x, z, y, r, g, b)).transpose()
 
-            clustered_points, labels, cluster_centers, cluster_heights = cluster(tree_points)
-            # There will be conflicts in the label numbers between quadrants, so we need to add an offset to the labels
-            labels += max_label
-            max_label = np.max(labels) + 1
-            gathered_clustered_points.append(clustered_points)
-            gathered_labels.append(labels)
-            gathered_cluster_centers.append(cluster_centers)
-            gathered_cluster_heights.append(cluster_heights)
+            # break into 100m x 100m sections
+            section_size = 16
+            sections = []
+            x_min, x_max = np.min(x), np.max(x)
+            z_min, z_max = np.min(z), np.max(z)
+            x_sections = int((x_max - x_min) / section_size)
+            z_sections = int((z_max - z_min) / section_size)
+            for i in range(x_sections):
+                for j in range(z_sections):
+                    x_min_section = x_min + i * section_size
+                    x_max_section = x_min + (i + 1) * section_size
+                    z_min_section = z_min + j * section_size
+                    z_max_section = z_min + (j + 1) * section_size
+                    section_indices = np.where((x >= x_min_section) & (x < x_max_section) & (z >= z_min_section) & (
+                            z < z_max_section))
+                    sections.append(tree_points[section_indices])
+
+            for section in tqdm(sections):
+                try:
+                    clustered_points, labels, cluster_centers, cluster_heights = cluster(section)
+                    # There will be conflicts in the label numbers between quadrants, so we need to add an offset to the
+                    # labels
+                    labels += max_label
+                    max_label = np.max(labels) + 1
+                    gathered_clustered_points.append(clustered_points)
+                    gathered_labels.append(labels)
+                    gathered_cluster_centers.append(cluster_centers)
+                    gathered_cluster_heights.append(cluster_heights)
+                except ValueError as e:
+                    # print(e)
+                    continue  # no points in this section
     # combine the clustered points from all quadrants
     clustered_points = np.vstack(gathered_clustered_points)
     labels = np.concatenate(gathered_labels)
