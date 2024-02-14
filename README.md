@@ -1,7 +1,12 @@
 # Forest-Friends
-Detection, positioning, and classification of biological tree families from airborne LiDAR data using PointNet++ and mean shift clustering.
+Detection, positioning, and classification of biological tree families from airborne LiDAR data using PointNet++ and mean shift clustering. _Work-in-progress_.
 
-*This project is a work in progress.*
+
+This project contains submodules. To clone the repository and its submodules, use the following command:
+
+```bash
+git clone --recurse-submodules https://github.com/ashtanmistal/Forest-Friends.git
+```
 
 ___
 
