@@ -4,12 +4,12 @@ import numpy as np
 from sklearn.cluster import estimate_bandwidth
 from sklearn.preprocessing import StandardScaler
 import os
+from sklearn.cluster import MeanShift
 
 from tqdm import tqdm
 
 from preprocessing import data_dir
 from src import utils
-from meanshift.mean_shift_gpu import MeanShiftEuc
 
 
 def gather_lidar_data():
@@ -91,7 +91,7 @@ def cluster(ds):
     stacked_xz = np.vstack((x, z)).transpose()
     bandwidth = estimate_bandwidth(stacked_xz, n_samples=n_samples)
     bandwidth_gpu = 2 * bandwidth / (np.max(stacked_xz) - np.min(stacked_xz))
-    ms = MeanShiftEuc(bandwidth=bandwidth_gpu, cluster_all=False, GPU=True)
+    ms = MeanShift(bandwidth=bandwidth_gpu, cluster_all=False)
     # print("Fitting meanshift...")
     ms.fit(stacked_xz)
     ms_labels = ms.labels_
