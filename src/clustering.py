@@ -8,8 +8,10 @@ from sklearn.cluster import MeanShift
 
 from tqdm import tqdm
 
-from preprocessing import data_dir
+# from preprocessing import data_dir
 from src import utils
+
+data_dir = r"C:\Users\Ashtan Mistal\OneDrive - UBC\School\2023S\minecraftUBC\resources"
 
 
 def gather_lidar_data():
@@ -77,21 +79,21 @@ def vertical_strata_analysis(cluster_centers, meanshift_labels, x, y, z):
     return crown_clusters, non_ground_points, tree_cluster_centers, tree_clusters
 
 
-def cluster(ds):
-    x = ds[:, 0]
-    y = ds[:, 1]
-    z = ds[:, 2]
-    r = ds[:, 3]
-    g = ds[:, 4]
-    b = ds[:, 5]
+def cluster(x, y, z, r, g, b):
+    # x = ds[:, 0]
+    # y = ds[:, 1]
+    # z = ds[:, 2]
+    # r = ds[:, 3]
+    # g = ds[:, 4]
+    # b = ds[:, 5]
 
     # perform mean shift clustering
     # estimate bandwidth (use random sample of 1000 points if the dataset is too large)
     n_samples = np.min([1000, len(x)])
     stacked_xz = np.vstack((x, z)).transpose()
     bandwidth = estimate_bandwidth(stacked_xz, n_samples=n_samples)
-    bandwidth_gpu = 2 * bandwidth / (np.max(stacked_xz) - np.min(stacked_xz))
-    ms = MeanShift(bandwidth=bandwidth_gpu, cluster_all=False)
+    # bandwidth_gpu = 2 * bandwidth / (np.max(stacked_xz) - np.min(stacked_xz))
+    ms = MeanShift(bandwidth=bandwidth, cluster_all=False)
     # print("Fitting meanshift...")
     ms.fit(stacked_xz)
     ms_labels = ms.labels_
@@ -110,11 +112,13 @@ def cluster(ds):
         for cluster in crown_clusters:
             cluster_indices = np.where(ms_labels == cluster)
             cluster_x, cluster_y, cluster_z = non_ground_points[cluster]
-            for point in np.array([cluster_x, cluster_y, cluster_z]).T:
+            # for point in np.array([cluster_x, cluster_y, cluster_z]).T:
+            concatenated_points = np.array([cluster_x, cluster_z]).T
+            for point in concatenated_points:
                 # find the nearest tree cluster
-                comparison_point = np.array([point[0], point[2]])
+                # comparison_point = np.array([point[0], point[2]])
                 nearest_cluster = tree_clusters[
-                    np.argmin(np.linalg.norm(np.array(tree_cluster_centers) - comparison_point, axis=1))]
+                    np.argmin(np.linalg.norm(np.array(tree_cluster_centers) - point, axis=1))]
                 # assign the point to that cluster
                 ms_labels[cluster_indices] = nearest_cluster
         # re-calculating the cluster centers and calculating the height of each tree
@@ -134,17 +138,26 @@ def cluster(ds):
 
 
 def main():
-
-    gathered_clustered_points = []
-    gathered_labels = []
-    gathered_cluster_centers = []
-    gathered_cluster_heights = []
     max_label = 0
 
     lidar_directory = os.path.join(data_dir, "las")
 
+    completed_datasets = [
+        "480000_5455000.las",
+        "480000_5456000.las",
+        "480000_5457000.las",
+        "481000_5454000.las",
+        "481000_5455000.las",
+        "481000_5456000.las",
+        "481000_5457000.las",
+        "481000_5458000.las",
+        "482000_5453000.las",
+        "482000_5454000.las",
+        "482000_5455000.las",
+    ]
+
     for filename in os.listdir(lidar_directory):
-        if filename.endswith(".las"):
+        if filename.endswith(".las") and filename not in completed_datasets:
             print("Processing", filename)
             x, y, z, r, g, b = utils.preprocess_dataset(
                 pylas.read(os.path.join(lidar_directory, filename)),
@@ -153,50 +166,58 @@ def main():
             if len(x) == 0:
                 continue
 
-            tree_points = np.vstack((x, z, y, r, g, b)).transpose()
+            # tree_points = np.vstack((x, z, y, r, g, b)).transpose()
 
             # break into 100m x 100m sections
             section_size = 16
-            sections = []
+            # sections = []
             x_min, x_max = np.min(x), np.max(x)
             z_min, z_max = np.min(z), np.max(z)
             x_sections = int((x_max - x_min) / section_size)
             z_sections = int((z_max - z_min) / section_size)
-            for i in range(x_sections):
-                for j in range(z_sections):
-                    x_min_section = x_min + i * section_size
-                    x_max_section = x_min + (i + 1) * section_size
-                    z_min_section = z_min + j * section_size
-                    z_max_section = z_min + (j + 1) * section_size
-                    section_indices = np.where((x >= x_min_section) & (x < x_max_section) & (z >= z_min_section) & (
-                            z < z_max_section))
-                    sections.append(tree_points[section_indices])
+            total_sections = x_sections * z_sections
+            with tqdm(total=total_sections) as pbar:
+                for i in range(x_sections):
+                    for j in range(z_sections):
+                        x_min_section = x_min + i * section_size
+                        x_max_section = x_min + (i + 1) * section_size
+                        z_min_section = z_min + j * section_size
+                        z_max_section = z_min + (j + 1) * section_size
+                        section_indices = np.where(
+                            (x >= x_min_section) & (x < x_max_section) & (z >= z_min_section) & (z < z_max_section))
+                        # section = np.vstack((x[section_indices], z[section_indices], y[section_indices],
+                        #                      r[section_indices], g[section_indices], b[section_indices])).transpose()
 
-            for section in tqdm(sections):
-                try:
-                    clustered_points, labels, cluster_centers, cluster_heights = cluster(section)
-                    # There will be conflicts in the label numbers between quadrants, so we need to add an offset to the
-                    # labels
-                    labels += max_label
-                    max_label = np.max(labels) + 1
-                    gathered_clustered_points.append(clustered_points)
-                    gathered_labels.append(labels)
-                    gathered_cluster_centers.append(cluster_centers)
-                    gathered_cluster_heights.append(cluster_heights)
-                except ValueError as e:
-                    # print(e)
-                    continue  # no points in this section
+                        try:
+                            clustered_points, labels, cluster_centers, cluster_heights = cluster(x[section_indices],
+                                                                                                 y[section_indices],
+                                                                                                 z[section_indices],
+                                                                                                 r[section_indices],
+                                                                                                 g[section_indices],
+                                                                                                 b[section_indices])
+                            labels += max_label
+                            max_label = np.max(labels) + 1
+                            np.savetxt(os.path.join(data_dir, "clustered_points.csv"), clustered_points, delimiter=",")
+                            np.savetxt(os.path.join(data_dir, "cluster_labels.csv"), labels, delimiter=",")
+                            np.savetxt(os.path.join(data_dir, "cluster_centers.csv"), cluster_centers, delimiter=",")
+                            np.savetxt(os.path.join(data_dir, "cluster_heights.csv"), cluster_heights, delimiter=",")
+                        except ValueError:
+                            # Handle cases with no points in section
+                            continue
+                        finally:
+                            pbar.update(1)
+
     # combine the clustered points from all quadrants
-    clustered_points = np.vstack(gathered_clustered_points)
-    labels = np.concatenate(gathered_labels)
-    cluster_centers = np.vstack(gathered_cluster_centers)
-    cluster_heights = np.concatenate(gathered_cluster_heights)
-
-    # save the clustered points to a csv file
-    np.savetxt(os.path.join(data_dir, "clustered_points.csv"), clustered_points, delimiter=",")
-    np.savetxt(os.path.join(data_dir, "cluster_labels.csv"), labels, delimiter=",")
-    np.savetxt(os.path.join(data_dir, "cluster_centers.csv"), cluster_centers, delimiter=",")
-    np.savetxt(os.path.join(data_dir, "cluster_heights.csv"), cluster_heights, delimiter=",")
+    # clustered_points = np.vstack(gathered_clustered_points)
+    # labels = np.concatenate(gathered_labels)
+    # cluster_centers = np.vstack(gathered_cluster_centers)
+    # cluster_heights = np.concatenate(gathered_cluster_heights)
+    #
+    # # save the clustered points to a csv file
+    # np.savetxt(os.path.join(data_dir, "clustered_points.csv"), clustered_points, delimiter=",")
+    # np.savetxt(os.path.join(data_dir, "cluster_labels.csv"), labels, delimiter=",")
+    # np.savetxt(os.path.join(data_dir, "cluster_centers.csv"), cluster_centers, delimiter=",")
+    # np.savetxt(os.path.join(data_dir, "cluster_heights.csv"), cluster_heights, delimiter=",")
     print("Clustering complete.")
 
 
