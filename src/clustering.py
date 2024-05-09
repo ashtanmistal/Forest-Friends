@@ -12,6 +12,7 @@ from tqdm import tqdm
 from src import utils
 
 data_dir = r"C:\Users\Ashtan Mistal\OneDrive - UBC\School\2023S\minecraftUBC\resources"
+save = False
 
 
 def gather_lidar_data():
@@ -45,36 +46,43 @@ def vertical_strata_analysis(cluster_centers, meanshift_labels, x, y, z):
     :return: crown_clusters (list of cluster indices), non_ground_points (list of arrays of non-ground points),
     tree_cluster_centers (list of tree cluster centers), tree_clusters (list of tree cluster indices)
     """
+    valid_indices = meanshift_labels != -1
+    unique_labels, inverse_indices = np.unique(meanshift_labels[valid_indices], return_inverse=True)
+
+    # Pre-allocate lists for clusters and centers
+    # num_clusters = len(unique_labels)
     non_ground_points = []
     crown_clusters = []
     crown_cluster_centers = []
     tree_clusters = []
     tree_cluster_centers = []
-    for cluster in np.unique(meanshift_labels):
-        # if the label is -1, continue
-        if cluster == -1:
-            continue
-        cluster_indices = np.where(meanshift_labels == cluster)
-        cluster_x, cluster_y, cluster_z = x[cluster_indices], y[cluster_indices], z[cluster_indices]
-        vertical_gap_y = np.max(cluster_y) * 0.3  # this 0.3 is based on the study
-        non_ground_indices = np.where(cluster_y > vertical_gap_y)
-        # we can ignore the ground residuals now. We just want to keep the crown and stem points
-        non_ground_points.append(
-            np.array([cluster_x[non_ground_indices], cluster_y[non_ground_indices], cluster_z[non_ground_indices]]))
 
-        # Now we need to determine if this is a crown cluster or a tree cluster. To do this we analyze the vertical
-        # length ratio of the cluster.
+    # Loop over the unique clusters
+    for idx, label in enumerate(unique_labels):
+        # Indices of the current cluster
+        cluster_mask = inverse_indices == idx
+        cluster_x = x[valid_indices][cluster_mask]
+        cluster_y = y[valid_indices][cluster_mask]
+        cluster_z = z[valid_indices][cluster_mask]
+
+        vertical_gap_y = np.max(cluster_y) * 0.3
+        non_ground_mask = cluster_y > vertical_gap_y
+
+        # Append non-ground points for this cluster
+        non_ground_points.append(
+            np.stack([cluster_x[non_ground_mask], cluster_y[non_ground_mask], cluster_z[non_ground_mask]], axis=-1))
+
+        # Analyze vertical length ratio (VLR) of the cluster
         vlr = (np.max(cluster_y) - np.min(cluster_y)) / np.max(cluster_y)
-        # A high VLR cluster is a tree cluster, a low VLR cluster is a crown cluster
-        cutoff = 0.62  # Modified cutoff value from the study to try and get more tree clusters given the fact that we
-        # a. are taking into account less data points, and b. are limiting the meanshift to a per-chunk basis
+        cutoff = 0.62
+
+        # Categorize cluster based on VLR
         if vlr < cutoff:
-            crown_clusters.append(cluster)  # crown cluster. We need to assign these points to the nearest tree
-            # cluster later.
-            crown_cluster_centers.append(cluster_centers[cluster])
+            crown_clusters.append(label)
+            crown_cluster_centers.append(cluster_centers[label])
         else:
-            tree_clusters.append(cluster)
-            tree_cluster_centers.append(cluster_centers[cluster])
+            tree_clusters.append(label)
+            tree_cluster_centers.append(cluster_centers[label])
 
     return crown_clusters, non_ground_points, tree_cluster_centers, tree_clusters
 
@@ -91,9 +99,9 @@ def cluster(x, y, z, r, g, b):
     # estimate bandwidth (use random sample of 1000 points if the dataset is too large)
     n_samples = np.min([1000, len(x)])
     stacked_xz = np.vstack((x, z)).transpose()
-    bandwidth = estimate_bandwidth(stacked_xz, n_samples=n_samples)
+    bandwidth = estimate_bandwidth(stacked_xz, n_samples=n_samples, n_jobs=-1)
     # bandwidth_gpu = 2 * bandwidth / (np.max(stacked_xz) - np.min(stacked_xz))
-    ms = MeanShift(bandwidth=bandwidth, cluster_all=False)
+    ms = MeanShift(bandwidth=bandwidth, cluster_all=False, n_jobs=-1)
     # print("Fitting meanshift...")
     ms.fit(stacked_xz)
     ms_labels = ms.labels_
@@ -122,15 +130,18 @@ def cluster(x, y, z, r, g, b):
                 # assign the point to that cluster
                 ms_labels[cluster_indices] = nearest_cluster
         # re-calculating the cluster centers and calculating the height of each tree
-        cluster_centers = []
-        cluster_heights = []
-        for cluster in np.unique(ms_labels):
+        unique_clusters = np.unique(ms_labels)
+        num_clusters = unique_clusters.size
+
+        cluster_centers = np.empty((num_clusters, 2))  # Two columns for x and z averages
+        cluster_heights = np.empty(num_clusters)
+
+        # Fill the arrays
+        for i, cluster in enumerate(unique_clusters):
             cluster_indices = np.where(ms_labels == cluster)
             cluster_x, cluster_y, cluster_z = x[cluster_indices], y[cluster_indices], z[cluster_indices]
-            cluster_centers.append(np.array([np.average(cluster_x), np.average(cluster_z)]))
-            cluster_heights.append(np.max(cluster_y))
-        cluster_centers = np.array(cluster_centers)
-        cluster_heights = np.array(cluster_heights)
+            cluster_centers[i] = [np.average(cluster_x), np.average(cluster_z)]
+            cluster_heights[i] = np.max(cluster_y)
     else:
         raise ValueError("No tree clusters found. This is likely due to the chunk being empty.")
     ds = np.vstack((x, y, z, r, g, b)).transpose()
@@ -197,10 +208,11 @@ def main():
                                                                                                  b[section_indices])
                             labels += max_label
                             max_label = np.max(labels) + 1
-                            np.savetxt(os.path.join(data_dir, "clustered_points.csv"), clustered_points, delimiter=",")
-                            np.savetxt(os.path.join(data_dir, "cluster_labels.csv"), labels, delimiter=",")
-                            np.savetxt(os.path.join(data_dir, "cluster_centers.csv"), cluster_centers, delimiter=",")
-                            np.savetxt(os.path.join(data_dir, "cluster_heights.csv"), cluster_heights, delimiter=",")
+                            if save:
+                                np.savetxt(os.path.join(data_dir, "clustered_points.csv"), clustered_points, delimiter=",")
+                                np.savetxt(os.path.join(data_dir, "cluster_labels.csv"), labels, delimiter=",")
+                                np.savetxt(os.path.join(data_dir, "cluster_centers.csv"), cluster_centers, delimiter=",")
+                                np.savetxt(os.path.join(data_dir, "cluster_heights.csv"), cluster_heights, delimiter=",")
                         except ValueError:
                             # Handle cases with no points in section
                             continue
