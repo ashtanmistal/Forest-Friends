@@ -12,7 +12,7 @@ from tqdm import tqdm
 from src import utils
 
 data_dir = r"C:\Users\Ashtan Mistal\OneDrive - UBC\School\2023S\minecraftUBC\resources"
-save = False
+save = True
 
 
 def gather_lidar_data():
