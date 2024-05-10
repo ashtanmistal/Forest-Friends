@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  nvidia-docker:
+    container_name: nvidia-docker
+    image: nvcr.io/nvidia/rapidsai/base:24.04-cuda12.2-py3.11
+    shm_size: 1g
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    volumes:  # copy the gpu_hdbscan folder to the container
+      - ./gpu_hdbscan:/workspace/gpu_hdbscan
+    tty: true
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
