@@ -4,11 +4,10 @@ project(ForestFriends)
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 14)
 
-# Find CUDA
 find_package(CUDA REQUIRED)
+find_package(PDAL REQUIRED)
 
-# Include directories
-include_directories(${CMAKE_SOURCE_DIR})
+include_directories(${CMAKE_SOURCE_DIR} ${PDAL_INCLUDE_DIRS})
 
 # Link directories
 link_directories(${CMAKE_CUDA_TOOLKIT_ROOT_DIR}/lib64)
