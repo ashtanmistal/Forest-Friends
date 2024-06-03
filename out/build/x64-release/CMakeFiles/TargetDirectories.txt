@@ -1,5 +1,0 @@
-C:/Users/Ashtan Mistal/OneDrive - UBC/School/2023W1/CPSC533Y/Project/Forest-Friends/out/build/x64-release/CMakeFiles/edit_cache.dir
-C:/Users/Ashtan Mistal/OneDrive - UBC/School/2023W1/CPSC533Y/Project/Forest-Friends/out/build/x64-release/CMakeFiles/rebuild_cache.dir
-C:/Users/Ashtan Mistal/OneDrive - UBC/School/2023W1/CPSC533Y/Project/Forest-Friends/out/build/x64-release/ForestFriends/CMakeFiles/ForestFriends.dir
-C:/Users/Ashtan Mistal/OneDrive - UBC/School/2023W1/CPSC533Y/Project/Forest-Friends/out/build/x64-release/ForestFriends/CMakeFiles/edit_cache.dir
-C:/Users/Ashtan Mistal/OneDrive - UBC/School/2023W1/CPSC533Y/Project/Forest-Friends/out/build/x64-release/ForestFriends/CMakeFiles/rebuild_cache.dir
