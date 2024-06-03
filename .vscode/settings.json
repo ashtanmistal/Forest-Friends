@@ -1,5 +1,6 @@
 {
     "files.associations": {
         "vector": "cpp"
-    }
+    },
+    "cmake.sourceDirectory": "C:/Users/Ashtan Mistal/OneDrive - UBC/School/2023W1/CPSC533Y/Project/Forest-Friends/src/gpu_hdbscan"
 }
