@@ -1,3 +1,0 @@
-[submodule "src/kpc"]
-	path = src/kpc
-	url = https://github.com/ashtanmistal/Forest-Friends-KPConv-PyTorch.git
