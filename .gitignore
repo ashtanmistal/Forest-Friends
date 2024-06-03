@@ -453,3 +453,29 @@ FodyWeavers.xsd
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudio,c++,cmake
 /.env
+
+
+# IntelliJ IDEA
+.idea/
+
+# Visual Studio Code
+.vscode/
+
+# Visual Studio
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# CMake Presets
+CMakePresets.json
+
+# Vcpkg
+vcpkg-configuration.json
+vcpkg.json
+
+# Others
+*.log
+*.tmp
+*.bak
+*.swp
+.DS_Store
