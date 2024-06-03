@@ -3,6 +3,8 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
+list(APPEND CMAKE_PREFIX_PATH "C:/dev/vcpkg/packages/curl_x64-windows/share/curl/")
+
 # Enable Hot Reload for MSVC compilers if supported.
 if (POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)

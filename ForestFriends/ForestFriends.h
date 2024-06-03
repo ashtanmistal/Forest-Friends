@@ -10,3 +10,6 @@
 #include <string>
 #include <stdexcept>
 #include <opencv2/opencv.hpp>
+#include <gdal.h>
+#include <gdal_priv.h>
+#include <cpl_conv.h>
