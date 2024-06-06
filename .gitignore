@@ -479,3 +479,5 @@ vcpkg.json
 *.bak
 *.swp
 .DS_Store
+ForestFriends/preprocessing/__pycache__/*
+ForestFriends/preprocessing/__pycache__/utils.cpython-312.pyc
