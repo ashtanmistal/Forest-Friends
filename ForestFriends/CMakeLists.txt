@@ -3,7 +3,7 @@
 #
 
 # Add source to this project's executable.
-add_executable (ForestFriends "ForestFriends.cpp" "ForestFriends.h")
+add_executable (ForestFriends "ForestFriends.cpp" "ForestFriends.h" "clustering.cpp" "cuda/DEMProcessing.h")
 
 set(OpenCV_DIR "C:/opencv/build")
 set(GDAL_DIR "C:/dev/vcpkg/packages/gdal_x64-windows/share/gdal")

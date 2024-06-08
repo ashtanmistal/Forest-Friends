@@ -479,3 +479,4 @@ vcpkg.json
 *.bak
 *.swp
 .DS_Store
+/out/build/x64-debug
