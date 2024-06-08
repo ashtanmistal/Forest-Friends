@@ -3,13 +3,6 @@ Detection, positioning, and classification of biological tree families from airb
 
 **_This project is a work-in-progress_.**
 
-
-This project contains submodules. To clone the repository and its submodules, use the following command:
-
-```bash
-git clone --recurse-submodules https://github.com/ashtanmistal/Forest-Friends.git
-```
-
 ___
 
 ## Introduction
