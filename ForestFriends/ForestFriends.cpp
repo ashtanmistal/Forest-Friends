@@ -2,7 +2,8 @@
 //
 
 #include "ForestFriends.h"
-#include "cuda/DEMProcessing.h"
+#include "dem_processing/DEMProcessing.h"
+#include "clustering/clustering.h"
 
 
 const std::string lidarDataDir = "data/";

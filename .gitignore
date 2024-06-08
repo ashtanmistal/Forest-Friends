@@ -481,3 +481,4 @@ vcpkg.json
 .DS_Store
 ForestFriends/preprocessing/__pycache__/*
 /out/build/x64-debug
+/vcpkg_installed
