@@ -12,6 +12,7 @@ const std::string demFile = lidarDataDir + "dem.tiff";
 
 // Load DEM using GDAL
 cv::Mat loadDEM(const std::string& demFile) {
+// Instead of using GDAL for this we could convert it into a more readable format in Python and then load it here
     GDALAllRegister();
     GDALDataset* dataset = (GDALDataset*)GDALOpen(demFile.c_str(), GA_ReadOnly);
     if (dataset == nullptr) {
@@ -57,7 +58,7 @@ void processDataset(const std::string& inputFile, const std::string& outputFile)
     removeDEMHeight(points, dem);
 
     // TODO Perform clustering using HDBSCAN
-    std::vector<int> labels = performHDBSCAN(points); // Dummy function; implement in clustering.cpp
+    std::vector<int> labels = performHDBSCAN(points);
 
     // Visualization
     cv::Mat image(1000, 1000, CV_8UC3, cv::Scalar(255, 255, 255));
