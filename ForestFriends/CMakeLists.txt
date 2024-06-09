@@ -17,6 +17,8 @@ target_include_directories(ForestFriends PRIVATE ${PDAL_INCLUDE_DIRS})
 find_package(CUDAToolkit REQUIRED)
 include_directories(${CUDAToolkit_INCLUDE_DIRS})
 
+include_directories(${CMAKE_SOURCE_DIR}/ForestFriends)
+
 target_link_libraries(ForestFriends PRIVATE ${OpenCV_LIBS} GDAL::GDAL ${PDAL_LIBRARIES} ${CUDAToolkit_LIBRARIES})
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)

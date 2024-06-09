@@ -1,4 +1,4 @@
-#include "cuda_functions.h"
+#include "DEMProcessing.h"
 #include <cuda_runtime.h>
 #include <iostream>
 
