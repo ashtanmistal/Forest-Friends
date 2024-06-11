@@ -1,7 +1,4 @@
-﻿// ForestFriends.cpp : Defines the entry point for the application.
-//
-
-#include "ForestFriends.h"
+﻿#include "ForestFriends.h"
 #include "dem_processing/DEMProcessing.h"
 #include "clustering/clustering.h"
 
