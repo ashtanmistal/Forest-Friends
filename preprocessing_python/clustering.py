@@ -1,11 +1,8 @@
-import pylas
-import pandas as pd
-import numpy as np
-from sklearn.cluster import estimate_bandwidth
-from sklearn.preprocessing import StandardScaler
 import os
-from sklearn.cluster import HDBSCAN, MeanShift
 
+import numpy as np
+import pylas
+from sklearn.cluster import MeanShift
 from tqdm import tqdm
 
 import utils
@@ -95,35 +92,25 @@ def vertical_strata_analysis(cluster_centers, meanshift_labels, x, y, z):
 
 
 def cluster(x, y, z, r, g, b):
-    # perform mean shift clustering
-    # estimate bandwidth (use random sample of 1000 points if the dataset is too large)
-    # n_samples = np.min([1000, len(x)])
     stacked_xz = np.vstack((x, z)).transpose()
-    # bandwidth = estimate_bandwidth(stacked_xz, n_samples=n_samples, n_jobs=-1)
     bandwidth = 15  # manually set bandwidth based on the approximate diameter of a tree
-    # print("Estimated bandwidth:", bandwidth)
     ms = MeanShift(bandwidth=bandwidth, cluster_all=False, n_jobs=-1, bin_seeding=True)
     print("Fitting meanshift...")
     ms.fit(stacked_xz)
     ms_labels = ms.labels_
     cluster_centers = ms.cluster_centers_
     # remove points that are not in a cluster
-    non_ground_indices = np.where(ms_labels != -1)
-    print(f"Number of non-ground points: {len(non_ground_indices[0])}, out of {len(x)} total points.")
-    x, y, z = x[non_ground_indices], y[non_ground_indices], z[non_ground_indices]
-    r, g, b = r[non_ground_indices], g[non_ground_indices], b[non_ground_indices]
-    ms_labels = ms_labels[non_ground_indices]
+    unclustered = np.where(ms_labels != -1)
+    print(f"Number of unclustered points: {len(unclustered[0])}, out of {len(x)} total points.")
+    x, y, z = x[unclustered], y[unclustered], z[unclustered]
+    r, g, b = r[unclustered], g[unclustered], b[unclustered]
+    ms_labels = ms_labels[unclustered]
     print(f"Number of clusters: {len(np.unique(ms_labels))}. Performing vertical strata analysis...")
-    # crown_clusters, non_ground_points, cluster_cent, tree_clusters = vertical_strata_analysis(cluster_centers,
-    #                                                                                                   ms_labels, x, y,
-    #                                                                                                   z)
-    crown_clusters, ngx, ngy, ngz, cluster_cent, tree_clusters = vertical_strata_analysis(cluster_centers,
-                                                                                                    ms_labels, x, y,
-                                                                                                    z)
-    print(f"Number of crown clusters: {len(crown_clusters)}; Number of tree clusters: {len(tree_clusters)}")
+    crown_cl, ngx, ngy, ngz, cl_centers, tree_cl = vertical_strata_analysis(cluster_centers, ms_labels, x, y, z)
+    print(f"Number of crown clusters: {len(crown_cl)}; Number of tree clusters: {len(tree_cl)}")
     # Now we need to assign the crown clusters to the nearest tree cluster
-    if len(tree_clusters) > 0:
-        for cluster in crown_clusters:
+    if len(tree_cl) > 0:
+        for cluster in crown_cl:
             cluster_indices = np.where(ms_labels == cluster)
             cluster_x, cluster_y, cluster_z = ngx[cluster], ngy[cluster], ngz[cluster]
             # for point in np.array([cluster_x, cluster_y, cluster_z]).T:
@@ -131,8 +118,8 @@ def cluster(x, y, z, r, g, b):
             for point in concatenated_points:
                 # find the nearest tree cluster
                 # comparison_point = np.array([point[0], point[2]])
-                nearest_cluster = tree_clusters[
-                    np.argmin(np.linalg.norm(np.array(cluster_cent) - point, axis=1))]
+                nearest_cluster = tree_cl[
+                    np.argmin(np.linalg.norm(np.array(cl_centers) - point, axis=1))]
                 # assign the point to that cluster
                 ms_labels[cluster_indices] = nearest_cluster
         # re-calculating the cluster centers and calculating the height of each tree
@@ -189,10 +176,14 @@ def main():
                     base = os.path.splitext(filename)[0]
                     if not os.path.exists(os.path.join(data_dir, "clustered_points")):
                         os.makedirs(os.path.join(data_dir, "clustered_points"))
-                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_clustered_points.csv"), clustered_points, delimiter=",")
-                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_labels.csv"), labels, delimiter=",")
-                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_centers.csv"), cluster_centers, delimiter=",")
-                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_heights.csv"), cluster_heights, delimiter=",")
+                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_clustered_points.csv"),
+                               clustered_points, delimiter=",")
+                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_labels.csv"), labels,
+                               delimiter=",")
+                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_centers.csv"),
+                               cluster_centers, delimiter=",")
+                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_heights.csv"),
+                               cluster_heights, delimiter=",")
             except ValueError as e:
                 print(e)
                 print("Skipping", filename)
