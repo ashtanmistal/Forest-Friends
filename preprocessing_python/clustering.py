@@ -172,7 +172,7 @@ def main():
             if len(x) == 0:
                 continue
 
-            # ignore half of the points to speed up processing
+            # ignore half of the points to speed up processing during initial model tuning
             x = x[::2]
             y = y[::2]
             z = z[::2]
@@ -182,6 +182,7 @@ def main():
 
             try:
                 clustered_points, labels, cluster_centers, cluster_heights = cluster(x, y, z, r, g, b)
+                utils.plot_clusters(clustered_points, labels, cluster_centers)
                 labels += max_label
                 max_label = np.max(labels) + 1
                 if save:
