@@ -173,24 +173,28 @@ def main():
                 continue
 
             # ignore half of the points to speed up processing
-            x = x[::3]
-            y = y[::3]
-            z = z[::3]
-            r = r[::3]
-            g = g[::3]
-            b = b[::3]
+            x = x[::2]
+            y = y[::2]
+            z = z[::2]
+            r = r[::2]
+            g = g[::2]
+            b = b[::2]
 
-            clustered_points, labels, cluster_centers, cluster_heights = cluster(x, y, z, r, g, b)
-            labels += max_label
-            max_label = np.max(labels) + 1
-            if save:
-                base = os.path.splitext(filename)[0]
-                if not os.path.exists(os.path.join(data_dir, "clustered_points")):
-                    os.makedirs(os.path.join(data_dir, "clustered_points"))
-                np.savetxt(os.path.join(data_dir, "clustered_points", base + "_clustered_points.csv"), clustered_points, delimiter=",")
-                np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_labels.csv"), labels, delimiter=",")
-                np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_centers.csv"), cluster_centers, delimiter=",")
-                np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_heights.csv"), cluster_heights, delimiter=",")
+            try:
+                clustered_points, labels, cluster_centers, cluster_heights = cluster(x, y, z, r, g, b)
+                labels += max_label
+                max_label = np.max(labels) + 1
+                if save:
+                    base = os.path.splitext(filename)[0]
+                    if not os.path.exists(os.path.join(data_dir, "clustered_points")):
+                        os.makedirs(os.path.join(data_dir, "clustered_points"))
+                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_clustered_points.csv"), clustered_points, delimiter=",")
+                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_labels.csv"), labels, delimiter=",")
+                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_centers.csv"), cluster_centers, delimiter=",")
+                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_heights.csv"), cluster_heights, delimiter=",")
+            except ValueError as e:
+                print(e)
+                print("Skipping", filename)
     print("Clustering complete.")
 
 
