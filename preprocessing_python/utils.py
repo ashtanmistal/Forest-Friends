@@ -1,6 +1,7 @@
 import pyproj
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 
 ROTATION_DEGREES = 28.000  # This is the rotation of UBC's roads relative to true north.
 ROTATION_RADIANS = math.radians(ROTATION_DEGREES)
@@ -61,3 +62,33 @@ def preprocess_dataset(lidar_ds, label_to_keep):
         return [], [], [], [], [], []
     rotated_x, rotated_z, rotated_y = dataset[0], -dataset[1], dataset[2]
     return rotated_x, rotated_y, rotated_z, filtered_red, filtered_green, filtered_blue
+
+
+def plot_clusters(clustered_points, labels, cluster_centers):
+    """
+    Plots the clustered points, ignoring the height values y (plotting x and z coordinates only).
+    This is intended to be called after Mean Shift Clustering in clustering.py
+    Uses hexbin to plot the clusters, coloring by label, and plotting cluster centers on top of the hexbin.
+    :param clustered_points: the points to plot
+    :param labels: Labels corresponding to the datapoints
+    :param cluster_centers: the centers of the clusters
+    """
+    x = clustered_points[:, 0]
+    z = clustered_points[:, 2]
+
+    plt.figure(figsize=(10, 8))
+
+    plt.hexbin(x, z, C=labels, gridsize=50, cmap='inferno', reduce_C_function=np.mean)
+    plt.colorbar(label='Cluster Label')
+
+    for center in cluster_centers:
+        plt.plot(center[0], center[2], 'bo', markersize=10, label='Cluster Center')
+
+    plt.xlabel('X Coordinate')
+    plt.ylabel('Z Coordinate')
+    plt.title('Clustered Points with Cluster Centers')
+    plt.legend()
+    plt.show()
+
+
+
