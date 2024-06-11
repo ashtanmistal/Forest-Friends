@@ -482,3 +482,4 @@ vcpkg.json
 ForestFriends/preprocessing/__pycache__/*
 /out/build/x64-debug
 /vcpkg_installed
+/build/.cmake/api/v1/query/client-vscode/query.json
