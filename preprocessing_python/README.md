@@ -24,15 +24,16 @@ Preprocessing the .csv file:
 
 # Clustering
 
-The clustering really is just another "preprocessing" step for the PointNet++ down the line. This is straightforward (as I've already implemented it); some tasks may have to be done in parallel to speed up the process. The previous implementation did not take full CUDA advantage, so code modifications may be necessary to speed up the process.
+As discussed in the primary README, the clustering is performed using a self-written implementation of [*A Robust Stepwise Clustering Approach to Detect Individual Trees in Temperate Hardwood Plantations using Airborne LiDAR Data*](https://doi.org/10.3390/rs15051241) by Shao et al. (2023).
 
-___
+However, there are some modifications that need to be made to the algorithm to better suit to our dataset. Namely, fine-tuning of the vertical length ratio (VLR) of the cluster and the bandwidth of the mean shift clustering.
 
-Once the clustering and preprocessing is done, there is further preprocessing that is necessary. 
-Now that we have the LiDAR data and the tree data, we need to match them up.
-It'll probably be good to make a KDTree of the tree location and tree type from the CSV file. 
-Then, for each point in the LiDAR data, we can find the nearest tree and assign it the tree type of that tree (the "label" for the point).
+After visualizing results, standalone mean shift clustering produces better results than with the vertical strata analysis. The vertical strata analysis pairs far too many tree clusters together such that there are some tree clusters that contain the vast majority of the points. The same does not occur with the standalone mean shift clustering. With some fine tuning (and thus manual setting) of the bandwidth, the standalone mean shift clustering produces better results.
 
-The next step is to be able to access the data in a way that is easy to use for the PointNet++.
-We need to be able to be given an index and return the point cloud for that tree along with the label.
-This specific step will be done in the DataLoader class for the PointNet++ model.
+![img.png](img.png)
+
+Above is an image with the vertical strata analysis integrated into the clustering algorithm. The points on the left have a more negative height value (as seen in the rightmost inset) and as a result get clustered together in the vertical strata analysis. This is consistent across similar datasets. The points on the right have a more positive height value - both in absolute as well as the fact that the trees are taller - and therefore remain their own clusters. It is difficult to determine a good VLR that will work for all tree types seen in the UBC dataset. As a result, the standalone mean shift clustering is used for the final results.
+
+![img_1.png](img_1.png)
+
+Above is an example of the same dataset but with the standalone mean shift clustering. The clusters are more evenly distributed and the trees are more accurately represented. Note that in both datasets, `cluster_all` was set to `False`, and as a result not all datapoints are assigned to a tree. These points are still plotted in the overall Minecraft world but are not used for the purposes of tree trunk positioning and tree type classification.
