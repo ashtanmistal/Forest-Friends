@@ -150,7 +150,13 @@ def cluster(x, y, z, r, g, b, perform_vertical_strata_analysis=False):
         return ds, ms_labels, cluster_centers, cluster_heights
     else:
         ds = np.vstack((x, y, z, r, g, b)).transpose()
-        return ds, ms_labels, cluster_centers, None
+
+        # calculate the height of each cluster
+        cluster_heights = np.empty(cluster_centers.shape[0])
+        for i, cluster in enumerate(cluster_centers):
+            cluster_indices = np.where(ms_labels == i)
+            cluster_heights[i] = np.max(z[cluster_indices])
+        return ds, ms_labels, cluster_centers, cluster_heights
 
 
 def main():
