@@ -64,7 +64,7 @@ def preprocess_dataset(lidar_ds, label_to_keep):
     return rotated_x, rotated_y, rotated_z, filtered_red, filtered_green, filtered_blue
 
 
-def plot_clusters(clustered_points, labels, cluster_centers):
+def plot_clusters(clustered_points, labels, cluster_centers, filename):
     """
     Plots the clustered points, ignoring the height values y (plotting x and z coordinates only).
     This is intended to be called after Mean Shift Clustering in clustering.py
@@ -75,20 +75,37 @@ def plot_clusters(clustered_points, labels, cluster_centers):
     """
     x = clustered_points[:, 0]
     z = clustered_points[:, 2]
+    heights = clustered_points[:, 1]
 
-    plt.figure(figsize=(10, 8))
+    fig, ax = plt.subplots(1, 3, figsize=(30, 10))
 
-    plt.hexbin(x, z, C=labels, gridsize=50, cmap='inferno', reduce_C_function=np.mean)
-    plt.colorbar(label='Cluster Label')
+    # First subplot: hexbin plot
+    ax[0].hexbin(x, z, C=labels, gridsize=100, cmap='inferno', reduce_C_function=np.mean)
+    ax[0].set_xlabel('X Coordinate')
+    ax[0].set_ylabel('Z Coordinate')
+    ax[0].set_title('Clustered Points with Cluster Centers: ' + filename)
+    plt.colorbar(ax[0].collections[0], ax=ax[0], label='Cluster Label')
 
     for center in cluster_centers:
-        plt.plot(center[0], center[2], 'bo', markersize=10, label='Cluster Center')
+        ax[0].plot(center[0], center[1], 'bx', markersize=10)
+        ax[2].plot(center[0], center[1], 'rx', markersize=10)
 
-    plt.xlabel('X Coordinate')
-    plt.ylabel('Z Coordinate')
-    plt.title('Clustered Points with Cluster Centers')
-    plt.legend()
+    # Second subplot: histogram
+    ax[1].hist(labels, bins=np.max(labels) + 1)
+    ax[1].set_xlabel('Cluster Label')
+    ax[1].set_ylabel('Number of Points')
+    ax[1].set_title('Cluster Histogram: ' + filename)
+
+    # Third subplot: hexbin plot with heights
+    ax[2].hexbin(x, z, C=heights, gridsize=100, cmap='viridis', reduce_C_function=np.mean)
+    ax[2].set_xlabel('X Coordinate')
+    ax[2].set_ylabel('Z Coordinate')
+    ax[2].set_title('Clustered Points with Heights: ' + filename)
+    plt.colorbar(ax[2].collections[0], ax=ax[2], label='Height')
+
+    plt.tight_layout()
     plt.show()
+
 
 
 
