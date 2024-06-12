@@ -479,3 +479,7 @@ vcpkg.json
 *.bak
 *.swp
 .DS_Store
+ForestFriends/preprocessing/__pycache__/*
+/out/build/x64-debug
+/vcpkg_installed
+/build/.cmake/api/v1/query/client-vscode/query.json
