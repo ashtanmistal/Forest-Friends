@@ -77,7 +77,7 @@ def vertical_strata_analysis(cluster_centers, meanshift_labels, x, y, z):
 
         # Analyze vertical length ratio (VLR) of the cluster
         vlr = (np.max(cluster_y) - np.min(cluster_y)) / np.max(cluster_y)
-        cutoff = 0.62
+        cutoff = 0.5
 
         # Categorize cluster based on VLR
         if vlr < cutoff:
@@ -91,54 +91,66 @@ def vertical_strata_analysis(cluster_centers, meanshift_labels, x, y, z):
     return crown_clusters, np.array(ngx), np.array(ngy), np.array(ngz), tree_cluster_centers, tree_clusters
 
 
-def cluster(x, y, z, r, g, b):
+def cluster(x, y, z, r, g, b, perform_vertical_strata_analysis=False):
     stacked_xz = np.vstack((x, z)).transpose()
-    bandwidth = 15  # manually set bandwidth based on the approximate diameter of a tree
-    ms = MeanShift(bandwidth=bandwidth, cluster_all=False, n_jobs=-1, bin_seeding=True)
+    bandwidth = 5  # manually set bandwidth based on the approximate diameter of a tree
+    ms = MeanShift(bandwidth=bandwidth, cluster_all=False, n_jobs=-1, bin_seeding=True, min_bin_freq=1000)
     print("Fitting meanshift...")
     ms.fit(stacked_xz)
     ms_labels = ms.labels_
     cluster_centers = ms.cluster_centers_
+
     # remove points that are not in a cluster
-    unclustered = np.where(ms_labels != -1)
-    print(f"Number of unclustered points: {len(unclustered[0])}, out of {len(x)} total points.")
-    x, y, z = x[unclustered], y[unclustered], z[unclustered]
-    r, g, b = r[unclustered], g[unclustered], b[unclustered]
-    ms_labels = ms_labels[unclustered]
-    print(f"Number of clusters: {len(np.unique(ms_labels))}. Performing vertical strata analysis...")
-    crown_cl, ngx, ngy, ngz, cl_centers, tree_cl = vertical_strata_analysis(cluster_centers, ms_labels, x, y, z)
-    print(f"Number of crown clusters: {len(crown_cl)}; Number of tree clusters: {len(tree_cl)}")
-    # Now we need to assign the crown clusters to the nearest tree cluster
-    if len(tree_cl) > 0:
-        for cluster in crown_cl:
-            cluster_indices = np.where(ms_labels == cluster)
-            cluster_x, cluster_y, cluster_z = ngx[cluster], ngy[cluster], ngz[cluster]
-            # for point in np.array([cluster_x, cluster_y, cluster_z]).T:
-            concatenated_points = np.array([cluster_x, cluster_z]).T
-            for point in concatenated_points:
-                # find the nearest tree cluster
-                # comparison_point = np.array([point[0], point[2]])
-                nearest_cluster = tree_cl[
-                    np.argmin(np.linalg.norm(np.array(cl_centers) - point, axis=1))]
-                # assign the point to that cluster
-                ms_labels[cluster_indices] = nearest_cluster
-        # re-calculating the cluster centers and calculating the height of each tree
-        unique_clusters = np.unique(ms_labels)
-        num_clusters = unique_clusters.size
+    clustered = np.where(ms_labels != -1)
+    print(f"Number of unclustered points: {len(np.where(ms_labels == -1)[0])}, out of {len(ms_labels)}")
+    x, y, z = x[clustered], y[clustered], z[clustered]
+    r, g, b = r[clustered], g[clustered], b[clustered]
+    ms_labels = ms_labels[clustered]
 
-        cluster_centers = np.empty((num_clusters, 2))  # Two columns for x and z averages
-        cluster_heights = np.empty(num_clusters)
+    # plot the clusters
+    # utils.plot_clusters(
+    #     np.vstack((x, y, z)).transpose(),
+    #     ms_labels, cluster_centers, "None")
+    # import pdb; pdb.set_trace()
 
-        # Fill the arrays
-        for i, cluster in enumerate(unique_clusters):
-            cluster_indices = np.where(ms_labels == cluster)
-            cluster_x, cluster_y, cluster_z = x[cluster_indices], y[cluster_indices], z[cluster_indices]
-            cluster_centers[i] = [np.average(cluster_x), np.average(cluster_z)]
-            cluster_heights[i] = np.max(cluster_y)
+    if perform_vertical_strata_analysis:
+        print(f"Number of clusters: {len(np.unique(ms_labels))}. Performing vertical strata analysis...")
+        crown_cl, ngx, ngy, ngz, cl_centers, tree_cl = vertical_strata_analysis(cluster_centers, ms_labels, x, y, z)
+        print(f"Number of crown clusters: {len(crown_cl)}; Number of tree clusters: {len(tree_cl)}")
+        # Now we need to assign the crown clusters to the nearest tree cluster
+        if len(tree_cl) > 0:
+            for cluster in crown_cl:
+                cluster_indices = np.where(ms_labels == cluster)
+                cluster_x, cluster_y, cluster_z = ngx[cluster], ngy[cluster], ngz[cluster]
+                # for point in np.array([cluster_x, cluster_y, cluster_z]).T:
+                concatenated_points = np.array([cluster_x, cluster_z]).T
+                for point in concatenated_points:
+                    # find the nearest tree cluster
+                    # comparison_point = np.array([point[0], point[2]])
+                    nearest_cluster = tree_cl[
+                        np.argmin(np.linalg.norm(np.array(cl_centers) - point, axis=1))]
+                    # assign the point to that cluster
+                    ms_labels[cluster_indices] = nearest_cluster
+            # re-calculating the cluster centers and calculating the height of each tree
+            unique_clusters = np.unique(ms_labels)
+            num_clusters = unique_clusters.size
+
+            cluster_centers = np.empty((num_clusters, 2))  # Two columns for x and z averages
+            cluster_heights = np.empty(num_clusters)
+
+            # Fill the arrays
+            for i, cluster in enumerate(unique_clusters):
+                cluster_indices = np.where(ms_labels == cluster)
+                cluster_x, cluster_y, cluster_z = x[cluster_indices], y[cluster_indices], z[cluster_indices]
+                cluster_centers[i] = [np.average(cluster_x), np.average(cluster_z)]
+                cluster_heights[i] = np.max(cluster_y)
+        else:
+            raise ValueError("No tree clusters found. This is likely due to the chunk being empty.")
+        ds = np.vstack((x, y, z, r, g, b)).transpose()
+        return ds, ms_labels, cluster_centers, cluster_heights
     else:
-        raise ValueError("No tree clusters found. This is likely due to the chunk being empty.")
-    ds = np.vstack((x, y, z, r, g, b)).transpose()
-    return ds, ms_labels, cluster_centers, cluster_heights
+        ds = np.vstack((x, y, z, r, g, b)).transpose()
+        return ds, ms_labels, cluster_centers, None
 
 
 def main():
@@ -169,7 +181,7 @@ def main():
 
             try:
                 clustered_points, labels, cluster_centers, cluster_heights = cluster(x, y, z, r, g, b)
-                utils.plot_clusters(clustered_points, labels, cluster_centers)
+                utils.plot_clusters(clustered_points, labels, cluster_centers, filename)
                 labels += max_label
                 max_label = np.max(labels) + 1
                 if save:
