@@ -114,6 +114,7 @@ def cluster(x, y, z, r, g, b, perform_vertical_strata_analysis=False):
     # import pdb; pdb.set_trace()
 
     if perform_vertical_strata_analysis:
+        # TODO it will be beneficial to only look for the nearest tree cluster within 5m of the crown cluster
         print(f"Number of clusters: {len(np.unique(ms_labels))}. Performing vertical strata analysis...")
         crown_cl, ngx, ngy, ngz, cl_centers, tree_cl = vertical_strata_analysis(cluster_centers, ms_labels, x, y, z)
         print(f"Number of crown clusters: {len(crown_cl)}; Number of tree clusters: {len(tree_cl)}")
@@ -150,7 +151,13 @@ def cluster(x, y, z, r, g, b, perform_vertical_strata_analysis=False):
         return ds, ms_labels, cluster_centers, cluster_heights
     else:
         ds = np.vstack((x, y, z, r, g, b)).transpose()
-        return ds, ms_labels, cluster_centers, None
+
+        # calculate the height of each cluster
+        cluster_heights = np.empty(cluster_centers.shape[0])
+        for i, cluster in enumerate(cluster_centers):
+            cluster_indices = np.where(ms_labels == i)
+            cluster_heights[i] = np.max(y[cluster_indices])
+        return ds, ms_labels, cluster_centers, cluster_heights
 
 
 def main():
@@ -181,7 +188,7 @@ def main():
 
             try:
                 clustered_points, labels, cluster_centers, cluster_heights = cluster(x, y, z, r, g, b)
-                utils.plot_clusters(clustered_points, labels, cluster_centers, filename)
+                # utils.plot_clusters(clustered_points, labels, cluster_centers, filename)
                 labels += max_label
                 max_label = np.max(labels) + 1
                 if save:
