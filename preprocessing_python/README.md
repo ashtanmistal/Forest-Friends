@@ -37,3 +37,9 @@ Above is an image with the vertical strata analysis integrated into the clusteri
 ![img_1.png](img_1.png)
 
 Above is an example of the same dataset but with the standalone mean shift clustering. The clusters are more evenly distributed and the trees are more accurately represented. Note that in both datasets, `cluster_all` was set to `False`, and as a result not all datapoints are assigned to a tree. These points are still plotted in the overall Minecraft world but are not used for the purposes of tree trunk positioning and tree type classification.
+
+
+
+![img_2.png](img_2.png)
+
+For reference, above is the same dataset but plotting all points, including those that were not identified to be a part of a particular tree cluster. There is a significant number of points that are not assigned to a tree cluster; this could be changed by modifying the bandwidth to be larger. 
