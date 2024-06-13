@@ -94,6 +94,7 @@ class TreeLiDARDataLoader(Dataset):
         self.process_data = process_data
         self.uniform = args.use_uniform_sample
         self.use_normals = args.use_normals
+        self.npoints = args.num_point
         # number of classes is 2: deciduous or coniferous
         self.num_category = 2
 
@@ -173,6 +174,12 @@ class TreeLiDARDataLoader(Dataset):
                             continue  # this is a tree that we must use the trained model to predict
                         named_label = tree_labels[idx]
                         points = clustered_points[np.where(cluster_labels == row[0])]
+
+                        if self.uniform:
+                            points = farthest_point_sample(points, self.npoints)
+                        else:
+                            points = points[0:self.npoints, :]
+
                         self.list_of_points.append(points)
                         self.list_of_labels.append(named_label)
 
@@ -184,7 +191,6 @@ class TreeLiDARDataLoader(Dataset):
             print('Load processed data from %s...' % self.root)
             with open(os.path.join(self.root, 'processed_data.pkl'), 'rb') as f:
                 self.list_of_points, self.list_of_labels = pickle.load(f)
-                self.num_labels = len(self.list_of_labels)
 
         # Split data into train and test sets
         train_points, test_points, train_labels, test_labels = train_test_split(
@@ -196,6 +202,11 @@ class TreeLiDARDataLoader(Dataset):
         else:
             self.list_of_points = test_points
             self.list_of_labels = test_labels
+
+        self.num_labels = len(self.list_of_labels)
+
+
+
 
     def __len__(self):
         return self.num_labels
@@ -216,7 +227,7 @@ class TreeLiDARDataLoader(Dataset):
         if not self.use_normals:
             point_set = point_set[:, 0:3]
 
-        return point_set, label[0]
+        return point_set.astype(np.float32), label
 
     def __getitem__(self, index):
         return self._get_item(index)
