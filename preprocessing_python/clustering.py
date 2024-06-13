@@ -94,7 +94,7 @@ def vertical_strata_analysis(cluster_centers, meanshift_labels, x, y, z):
 def cluster(x, y, z, r, g, b, perform_vertical_strata_analysis=False):
     stacked_xz = np.vstack((x, z)).transpose()
     bandwidth = 5  # manually set bandwidth based on the approximate diameter of a tree
-    ms = MeanShift(bandwidth=bandwidth, cluster_all=False, n_jobs=-1, bin_seeding=True, min_bin_freq=1000)
+    ms = MeanShift(bandwidth=bandwidth, cluster_all=False, n_jobs=-1, bin_seeding=True, min_bin_freq=2048)
     print("Fitting meanshift...")
     ms.fit(stacked_xz)
     ms_labels = ms.labels_
@@ -166,6 +166,23 @@ def main():
     lidar_directory = os.path.join(data_dir, "las")
 
     completed_datasets = [
+        # "480000_5455000.las",
+        # "480000_5456000.las",
+        # "480000_5457000.las",
+        # "481000_5454000.las",
+        # "481000_5455000.las",
+        # "481000_5456000.las",
+        # "481000_5457000.las",
+        # "481000_5458000.las",
+        # "482000_5453000.las",
+        # "482000_5454000.las",
+        # "482000_5455000.las",
+        # "482000_5456000.las",
+        # "482000_5457000.las",
+        # "482000_5458000.las",
+        # "483000_5453000.las",
+        # "483000_5454000.las",
+        # "483000_5455000.las",
     ]
 
     for filename in os.listdir(lidar_directory):
@@ -230,6 +247,7 @@ def main():
                 print(e)
                 print("Skipping", filename)
     print("Clustering complete.")
+
 
 
 if __name__ == "__main__":
