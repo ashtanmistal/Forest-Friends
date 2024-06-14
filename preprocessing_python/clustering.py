@@ -94,7 +94,7 @@ def vertical_strata_analysis(cluster_centers, meanshift_labels, x, y, z):
 def cluster(x, y, z, r, g, b, perform_vertical_strata_analysis=False):
     stacked_xz = np.vstack((x, z)).transpose()
     bandwidth = 5  # manually set bandwidth based on the approximate diameter of a tree
-    ms = MeanShift(bandwidth=bandwidth, cluster_all=False, n_jobs=-1, bin_seeding=True, min_bin_freq=1000)
+    ms = MeanShift(bandwidth=bandwidth, cluster_all=False, n_jobs=-1, bin_seeding=True, min_bin_freq=1024)
     print("Fitting meanshift...")
     ms.fit(stacked_xz)
     ms_labels = ms.labels_
@@ -166,6 +166,23 @@ def main():
     lidar_directory = os.path.join(data_dir, "las")
 
     completed_datasets = [
+        # "480000_5455000.las",
+        # "480000_5456000.las",
+        # "480000_5457000.las",
+        # "481000_5454000.las",
+        # "481000_5455000.las",
+        # "481000_5456000.las",
+        # "481000_5457000.las",
+        # "481000_5458000.las",
+        # "482000_5453000.las",
+        # "482000_5454000.las",
+        # "482000_5455000.las",
+        # "482000_5456000.las",
+        # "482000_5457000.las",
+        # "482000_5458000.las",
+        # "483000_5453000.las",
+        # "483000_5454000.las",
+        # "483000_5455000.las",
     ]
 
     for filename in os.listdir(lidar_directory):
@@ -190,23 +207,47 @@ def main():
                 clustered_points, labels, cluster_centers, cluster_heights = cluster(x, y, z, r, g, b)
                 # utils.plot_clusters(clustered_points, labels, cluster_centers, filename)
                 labels += max_label
+                min_label = np.min(labels)
                 max_label = np.max(labels) + 1
                 if save:
                     base = os.path.splitext(filename)[0]
                     if not os.path.exists(os.path.join(data_dir, "clustered_points")):
                         os.makedirs(os.path.join(data_dir, "clustered_points"))
+
+                    # sort the points by label
+                    print("Sorting and saving...")
+                    sorted_indices = np.argsort(labels)
+                    clustered_points = clustered_points[sorted_indices].astype(np.float32)
+                    labels = labels[sorted_indices]
+
+                    # np.savetxt(os.path.join(data_dir, "clustered_points", base + "_clustered_points.csv"),
+                    #            clustered_points, delimiter=",")
+                    # np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_labels.csv"), labels,
+                    #            delimiter=",")
+                    # np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_centers.csv"),
+                    #            cluster_centers, delimiter=",")
+                    # np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_heights.csv"),
+                    #            cluster_heights, delimiter=",")
+
+                    # instead of storing them separately, let's make a single file for the label data
+                    # format should be [cluster_label, cluster_center_x, cluster_center_z, cluster_height]
+                    # Here, cluster_label is more of an index corresponding to the cluster center and height.
+
+                    label_indices = np.arange(min_label, max_label)
+                    label_data = np.column_stack((label_indices, cluster_centers, cluster_heights))
+
+                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_label_data.csv"),
+                               label_data, delimiter=",")
                     np.savetxt(os.path.join(data_dir, "clustered_points", base + "_clustered_points.csv"),
                                clustered_points, delimiter=",")
-                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_labels.csv"), labels,
-                               delimiter=",")
-                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_centers.csv"),
-                               cluster_centers, delimiter=",")
-                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_heights.csv"),
-                               cluster_heights, delimiter=",")
+                    np.savetxt(os.path.join(data_dir, "clustered_points", base + "_cluster_labels.csv"),
+                               labels, delimiter=",")
+
             except ValueError as e:
                 print(e)
                 print("Skipping", filename)
     print("Clustering complete.")
+
 
 
 if __name__ == "__main__":
