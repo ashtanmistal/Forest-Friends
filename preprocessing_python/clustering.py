@@ -94,7 +94,7 @@ def vertical_strata_analysis(cluster_centers, meanshift_labels, x, y, z):
 def cluster(x, y, z, r, g, b, perform_vertical_strata_analysis=False):
     stacked_xz = np.vstack((x, z)).transpose()
     bandwidth = 5  # manually set bandwidth based on the approximate diameter of a tree
-    ms = MeanShift(bandwidth=bandwidth, cluster_all=False, n_jobs=-1, bin_seeding=True, min_bin_freq=2048)
+    ms = MeanShift(bandwidth=bandwidth, cluster_all=False, n_jobs=-1, bin_seeding=True, min_bin_freq=1024)
     print("Fitting meanshift...")
     ms.fit(stacked_xz)
     ms_labels = ms.labels_
@@ -217,7 +217,7 @@ def main():
                     # sort the points by label
                     print("Sorting and saving...")
                     sorted_indices = np.argsort(labels)
-                    clustered_points = clustered_points[sorted_indices]
+                    clustered_points = clustered_points[sorted_indices].astype(np.float32)
                     labels = labels[sorted_indices]
 
                     # np.savetxt(os.path.join(data_dir, "clustered_points", base + "_clustered_points.csv"),
