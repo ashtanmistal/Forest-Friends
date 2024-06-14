@@ -12,7 +12,6 @@ import logging
 from tqdm import tqdm
 import sys
 import importlib
-import pickle
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
@@ -119,8 +118,8 @@ def main(args):
         instance_acc, class_acc, labels, points = test(classifier.eval(), testDataLoader, vote_num=args.num_votes, num_class=num_class)
         # log_string('Test Instance Accuracy: %f, Class Accuracy: %f' % (instance_acc, class_acc))  # not accurate given the dummy labels used
         print("Dumping points and labels...")
-        with os.path.join(data_path, "test_classification.pkl") as f:
-            pickle.dump([labels, points], f)
+        np.save(data_path + "/predicted_labels.npy", labels)
+        np.save(data_path + "/predicted_points.npy", points)
 
 
 if __name__ == '__main__':
