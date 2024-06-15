@@ -2,7 +2,8 @@
 Author: Benny
 Date: Nov 2019
 """
-from data_utils.ModelNetDataLoader import ModelNetDataLoader
+
+from data_utils.TreeLiDARDataLoader import TreeLiDARDataLoader
 import argparse
 import numpy as np
 import os
@@ -23,11 +24,11 @@ def parse_args():
     parser.add_argument('--use_cpu', action='store_true', default=False, help='use cpu mode')
     parser.add_argument('--gpu', type=str, default='0', help='specify gpu device')
     parser.add_argument('--batch_size', type=int, default=24, help='batch size in training')
-    parser.add_argument('--num_category', default=40, type=int, choices=[10, 40],  help='training on ModelNet10/40')
+    # parser.add_argument('--num_category', default=40, type=int, choices=[10, 40],  help='training on ModelNet10/40')
     parser.add_argument('--num_point', type=int, default=1024, help='Point Number')
     parser.add_argument('--log_dir', type=str, required=True, help='Experiment root')
     parser.add_argument('--use_normals', action='store_true', default=False, help='use normals')
-    parser.add_argument('--use_uniform_sample', action='store_true', default=False, help='use uniform sampiling')
+    parser.add_argument('--use_uniform_sample', action='store_true', default=True, help='use uniform sampiling')
     parser.add_argument('--num_votes', type=int, default=3, help='Aggregate classification scores with voting')
     return parser.parse_args()
 
@@ -36,6 +37,9 @@ def test(model, loader, num_class=40, vote_num=1):
     mean_correct = []
     classifier = model.eval()
     class_acc = np.zeros((num_class, 3))
+
+    pred_points = []
+    pred_labels = []
 
     for j, (points, target) in tqdm(enumerate(loader), total=len(loader)):
         if not args.use_cpu:
@@ -50,6 +54,9 @@ def test(model, loader, num_class=40, vote_num=1):
         pred = vote_pool / vote_num
         pred_choice = pred.data.max(1)[1]
 
+        pred_labels.append(pred_choice.cpu().numpy())
+        pred_points.append(points.cpu().numpy())
+
         for cat in np.unique(target.cpu()):
             classacc = pred_choice[target == cat].eq(target[target == cat].long().data).cpu().sum()
             class_acc[cat, 0] += classacc.item() / float(points[target == cat].size()[0])
@@ -60,7 +67,8 @@ def test(model, loader, num_class=40, vote_num=1):
     class_acc[:, 2] = class_acc[:, 0] / class_acc[:, 1]
     class_acc = np.mean(class_acc[:, 2])
     instance_acc = np.mean(mean_correct)
-    return instance_acc, class_acc
+
+    return instance_acc, class_acc, pred_labels, pred_points
 
 
 def main(args):
@@ -88,13 +96,14 @@ def main(args):
 
     '''DATA LOADING'''
     log_string('Load dataset ...')
-    data_path = 'data/modelnet40_normal_resampled/'
+    data_path = r"C:\Users\Ashtan Mistal\OneDrive - UBC\School\2023S\minecraftUBC\resources\clustered_points"
 
-    test_dataset = ModelNetDataLoader(root=data_path, args=args, split='test', process_data=False)
+    # test_dataset = ModelNetDataLoader(root=data_path, args=args, split='test', process_data=False)
+    test_dataset = TreeLiDARDataLoader(root=data_path, args=args, split='all', process_data=False)
     testDataLoader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=10)
 
     '''MODEL LOADING'''
-    num_class = args.num_category
+    num_class = 2  # overridden
     model_name = os.listdir(experiment_dir + '/logs')[0].split('.')[0]
     model = importlib.import_module(model_name)
 
@@ -106,8 +115,11 @@ def main(args):
     classifier.load_state_dict(checkpoint['model_state_dict'])
 
     with torch.no_grad():
-        instance_acc, class_acc = test(classifier.eval(), testDataLoader, vote_num=args.num_votes, num_class=num_class)
-        log_string('Test Instance Accuracy: %f, Class Accuracy: %f' % (instance_acc, class_acc))
+        instance_acc, class_acc, labels, points = test(classifier.eval(), testDataLoader, vote_num=args.num_votes, num_class=num_class)
+        # log_string('Test Instance Accuracy: %f, Class Accuracy: %f' % (instance_acc, class_acc))  # not accurate given the dummy labels used
+        print("Dumping points and labels...")
+        np.save(data_path + "/predicted_labels.npy", labels)
+        np.save(data_path + "/predicted_points.npy", points)
 
 
 if __name__ == '__main__':
